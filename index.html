@@ -304,7 +304,7 @@ header{width:100%;max-width:520px;padding:20px 20px 10px;display:flex;justify-co
 </div>
 
 <!-- GAME SCREEN -->
-<div id="game-screen" style="display:none;width:100%;display:none;flex-direction:column;align-items:center">
+<div id="game-screen" style="display:none;width:100%;flex-direction:column;align-items:center">
 
 <header>
   <div class="logo" onclick="backToMenu()">BL<span>○</span>C</div>
@@ -589,10 +589,18 @@ function startGame(mode){
 }
 
 function backToMenu(){
+  // Multiplayer cleanup
+  if(typeof botTimer!=='undefined'&&botTimer){clearInterval(botTimer);botTimer=null}
+  if(typeof matchChannel!=='undefined'&&matchChannel){matchChannel.unsubscribe();matchChannel=null}
+  if(typeof matchmakingPollTimer!=='undefined'&&matchmakingPollTimer){clearInterval(matchmakingPollTimer);matchmakingPollTimer=null}
+  document.getElementById('matchmaking-screen')?.classList.remove('show');
+  document.getElementById('match-result')?.classList.remove('show');
+  document.getElementById('opponent-preview')?.classList.remove('show');
   stopBlitzTimer();
   document.getElementById('game-over').classList.remove('show');
   document.getElementById('game-screen').style.display='none';
   document.getElementById('mode-select').classList.remove('hidden');
+  if(typeof showModeRank==='function')showModeRank();
 }
 
 // ===== BOARD =====
@@ -878,6 +886,14 @@ function addScore(amount,r,c){
   if(amount>50){const b=document.getElementById('board'),rect=b.getBoundingClientRect(),cs=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||42,step=cs+3;
     const pop=document.createElement('div');pop.className='score-popup';pop.style.left=(rect.left+c*step+cs/2)+'px';pop.style.top=(rect.top+r*step)+'px';
     pop.style.color=amount>500?'#ff6a9e':amount>200?'#ffb86a':amount>100?'#6affd4':'#7c6aff';pop.textContent='+'+amount;document.body.appendChild(pop);setTimeout(()=>pop.remove(),1000)}
+  // Versus mode: send junk and sync board
+  if(gameMode==='versus'&&amount>=100){
+    let estLines=0;
+    if(amount>=1000)estLines=4;else if(amount>=600)estLines=3;else if(amount>=300)estLines=2;else if(amount>=100)estLines=1;
+    if(estLines>0&&typeof sendJunkToOpponent==='function')sendJunkToOpponent(estLines);
+    setTimeout(()=>{if(typeof pendingJunk!=='undefined'&&pendingJunk>0&&gameMode==='versus'&&typeof receiveJunk==='function')receiveJunk()},300);
+    if(typeof broadcastEvent==='function')broadcastEvent('board_update',{board:board});
+  }
 }
 function showCombo(count){sfxCombo();hapticHeavy();const b=document.getElementById('combo-badge');b.textContent=`×${count} COMBO`;b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2500)}
 function updateUI(){document.getElementById('best-display').textContent=best.toLocaleString();document.getElementById('lines-display').textContent=totalLines}
@@ -898,7 +914,14 @@ function checkGameOver(){
   const ap=pieces.filter(p=>p!==null);for(const p of ap)for(let r=0;r<GRID;r++)for(let c=0;c<GRID;c++)if(canPlace(p,r,c))return;
   setTimeout(()=>showGameOver(),400)}
 function showGameOver(){
-  stopBlitzTimer();sfxGameOver();hapticNotification('ERROR');
+  stopBlitzTimer();
+  // In versus mode, game over means you lost
+  if(gameMode==='versus'){
+    broadcastEvent('game_over',{});
+    endVersusMatch(false);
+    return;
+  }
+  sfxGameOver();hapticNotification('ERROR');
   document.getElementById('game-over-title').textContent=gameMode==='blitz'?'TIME\'S UP':'GAME OVER';
   document.getElementById('game-over-sub').textContent=gameMode==='blitz'?'Great run!':'No more valid moves';
   document.getElementById('final-score').textContent=score.toLocaleString();
@@ -1359,69 +1382,6 @@ function rematch1v1(){
   document.getElementById('match-result').classList.remove('show');
   start1v1();
 }
-
-// Override backToMenu to clean up multiplayer
-const origBackToMenu=backToMenu;
-backToMenu=function(){
-  if(botTimer){clearInterval(botTimer);botTimer=null}
-  if(matchChannel){matchChannel.unsubscribe();matchChannel=null}
-  if(matchmakingPollTimer){clearInterval(matchmakingPollTimer);matchmakingPollTimer=null}
-  document.getElementById('matchmaking-screen').classList.remove('show');
-  document.getElementById('match-result').classList.remove('show');
-  document.getElementById('opponent-preview').classList.remove('show');
-  stopBlitzTimer();
-  document.getElementById('game-over').classList.remove('show');
-  document.getElementById('game-screen').style.display='none';
-  document.getElementById('mode-select').classList.remove('hidden');
-  showModeRank();
-};
-
-// Override showGameOver for versus mode
-const origShowGameOver=showGameOver;
-showGameOver=function(){
-  if(gameMode==='versus'){
-    // In versus, game over means you lost
-    broadcastEvent('game_over',{});
-    endVersusMatch(false);
-    return;
-  }
-  origShowGameOver();
-};
-
-// Hook junk receiving into tryPlace
-const origTryPlaceRef=tryPlace;
-const wrapTryPlace=function(si,ar,ac){
-  const result=origTryPlaceRef(si,ar,ac);
-  if(result&&gameMode==='versus'){
-    // After successful placement, receive pending junk
-    setTimeout(()=>{
-      if(pendingJunk>0)receiveJunk();
-    },200);
-    // Send board state to opponent
-    broadcastEvent('board_update',{board:board});
-    // Check if lines were cleared and send junk
-    // (linesCleared is calculated inside tryPlace, we re-check board)
-  }
-  return result;
-};
-// Note: We can't easily override tryPlace since it's called everywhere.
-// Instead, we'll hook into the scoring — after addScore, check for junk sending.
-
-// Patch: send junk after line clears in versus mode
-const origAddScore=addScore;
-addScore=function(amount,r,c){
-  origAddScore(amount,r,c);
-  if(gameMode==='versus'&&amount>50){
-    // Estimate lines from score
-    // lineBonus table: 100,300,600,1000 → 1,2,3,4 lines
-    let estLines=0;
-    if(amount>=1000)estLines=4;else if(amount>=600)estLines=3;else if(amount>=300)estLines=2;else if(amount>=100)estLines=1;
-    if(estLines>0)sendJunkToOpponent(estLines);
-    // Receive pending junk after a short delay
-    setTimeout(()=>{if(pendingJunk>0&&gameMode==='versus')receiveJunk()},300);
-    broadcastEvent('board_update',{board:board});
-  }
-};
 
 // Load rank on mode select
 setTimeout(()=>showModeRank(),500);
