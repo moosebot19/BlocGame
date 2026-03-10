@@ -35,6 +35,62 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .mode-btn.classic .mode-name{color:var(--c3)}
 .mode-btn.blitz .mode-name{color:var(--c4)}
 
+.mode-btn.versus::before{background:linear-gradient(90deg,var(--c6),var(--c4))}
+.mode-btn.versus .mode-name{color:var(--c6)}
+
+/* MATCHMAKING SCREEN */
+#matchmaking-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:850;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#matchmaking-screen.show{display:flex}
+.mm-title{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:800;color:var(--text)}
+.mm-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--c6);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.mm-status{color:var(--muted);font-size:11px;letter-spacing:1px}
+.mm-cancel{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 24px;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;margin-top:10px}
+.mm-vs{font-family:'Unbounded',sans-serif;font-size:32px;font-weight:900;color:var(--c6);animation:comboPulse .6s ease}
+.mm-player{text-align:center}
+.mm-player-name{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;color:var(--text)}
+.mm-player-rank{font-size:10px;margin-top:4px}
+
+/* RANK BADGES */
+.rank-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.rank-bronze{background:rgba(205,127,50,.2);color:#cd7f32;border:1px solid rgba(205,127,50,.3)}
+.rank-silver{background:rgba(192,192,192,.15);color:#c0c0c0;border:1px solid rgba(192,192,192,.3)}
+.rank-gold{background:rgba(255,215,0,.15);color:#ffd700;border:1px solid rgba(255,215,0,.3)}
+.rank-platinum{background:rgba(106,255,212,.12);color:var(--c3);border:1px solid rgba(106,255,212,.3)}
+.rank-diamond{background:rgba(106,174,255,.15);color:var(--c5);border:1px solid rgba(106,174,255,.3)}
+.rank-master{background:rgba(255,106,158,.15);color:var(--c2);border:1px solid rgba(255,106,158,.3)}
+
+/* OPPONENT PREVIEW (corner mini-board) */
+#opponent-preview{display:none;position:fixed;top:env(safe-area-inset-top,10px);right:10px;z-index:20;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;margin-top:10px}
+#opponent-preview.show{display:block}
+.opp-header{display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:8px;color:var(--muted)}
+.opp-name{color:var(--text);font-weight:700;font-size:9px;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opp-board{display:grid;grid-template-columns:repeat(8,8px);grid-template-rows:repeat(8,8px);gap:1px}
+.opp-cell{width:8px;height:8px;background:var(--surface2);border-radius:1px}
+.opp-cell.filled{background:var(--muted)}
+.opp-cell.junk{background:var(--c6);opacity:.7}
+.opp-junk-warning{text-align:center;font-size:8px;color:var(--c6);font-weight:700;margin-top:3px;min-height:12px}
+
+/* JUNK ROW ANIMATION */
+.cell.junk-row{animation:junkSlam .3s ease}
+@keyframes junkSlam{0%{transform:translateY(100%);opacity:0}60%{transform:translateY(-5%)}100%{transform:translateY(0);opacity:1}}
+
+/* MATCH RESULT OVERLAY */
+#match-result{display:none;position:fixed;inset:0;background:rgba(10,10,15,.95);backdrop-filter:blur(10px);z-index:500;align-items:center;justify-content:center}
+#match-result.show{display:flex;animation:fadeIn .5s ease}
+.match-result-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:36px;text-align:center;max-width:300px;width:90%;position:relative;overflow:hidden}
+.match-result-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.match-result-card.win::before{background:linear-gradient(90deg,var(--c3),var(--c4))}
+.match-result-card.lose::before{background:linear-gradient(90deg,var(--c6),var(--c2))}
+.result-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;margin-bottom:8px}
+.result-title.win-title{color:var(--c3)}
+.result-title.lose-title{color:var(--c6)}
+.result-elo{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:700;margin:10px 0}
+.result-elo.positive{color:var(--c3)}
+.result-elo.negative{color:var(--c6)}
+.result-rank{margin:8px 0 16px}
+.result-stats{color:var(--muted);font-size:11px;margin-bottom:20px}
+
 /* HEADER */
 header{width:100%;max-width:520px;padding:20px 20px 10px;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:10}
 .logo{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:900;letter-spacing:-.5px;background:linear-gradient(135deg,var(--c1),var(--c2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;cursor:pointer}
@@ -240,6 +296,11 @@ header{width:100%;max-width:520px;padding:20px 20px 10px;display:flex;justify-co
     <div class="mode-name">⚡ Blitz</div>
     <div class="mode-desc">Start with 60 seconds. Clear lines to earn bonus time. How long can you survive?</div>
   </div>
+  <div class="mode-btn versus" onclick="start1v1()">
+    <div class="mode-name">⚔ 1v1 Ranked</div>
+    <div class="mode-desc">Real-time battle. Clear lines to send junk. Climb Bronze→Master. Same pieces, pure skill.</div>
+  </div>
+  <div id="mode-rank-display" style="margin-top:8px;font-size:10px;color:var(--muted);text-align:center"></div>
 </div>
 
 <!-- GAME SCREEN -->
@@ -312,6 +373,33 @@ header{width:100%;max-width:520px;padding:20px 20px 10px;display:flex;justify-co
 
 <div id="drag-piece"></div>
 <div id="toast"></div>
+
+<!-- Opponent mini-board preview -->
+<div id="opponent-preview">
+  <div class="opp-header"><span class="opp-name" id="opp-name">---</span><span class="rank-badge rank-bronze" id="opp-rank-badge">---</span></div>
+  <div class="opp-board" id="opp-board"></div>
+  <div class="opp-junk-warning" id="opp-junk-warning"></div>
+</div>
+
+<!-- Matchmaking Screen -->
+<div id="matchmaking-screen">
+  <div class="mm-title" id="mm-title">Finding Opponent...</div>
+  <div class="mm-spinner" id="mm-spinner"></div>
+  <div class="mm-status" id="mm-status">Searching for players near your rank</div>
+  <button class="mm-cancel" id="mm-cancel" onclick="cancelMatchmaking()">CANCEL</button>
+</div>
+
+<!-- Match Result -->
+<div id="match-result">
+  <div class="match-result-card" id="match-result-card">
+    <div class="result-title" id="result-title">VICTORY</div>
+    <div class="result-elo" id="result-elo">+25 ELO</div>
+    <div class="result-rank" id="result-rank"></div>
+    <div class="result-stats" id="result-stats"></div>
+    <button class="btn-primary" onclick="backToMenu()">BACK TO MENU</button>
+    <button class="btn-secondary" onclick="rematch1v1()">⚔ REMATCH</button>
+  </div>
+</div>
 
 <div id="game-over">
   <div class="game-over-card">
@@ -949,6 +1037,394 @@ async function addFriend(){if(!currentPlayer)return;const i=document.getElementB
   if(error){e.textContent='Server error';return}if(data&&data.error){e.textContent=data.error;return}i.value='';showToast('Added '+n+'!');loadLeaderboard('friends')}
 
 loadPlayer();loadSoundPref();handleOAuthCallback();
+
+// ===== 1v1 MULTIPLAYER ENGINE =====
+let matchId=null,matchChannel=null,playerNumber=0,opponentId=null,opponentNickname='';
+let opponentBoard=Array.from({length:GRID},()=>Array(GRID).fill(null));
+let pendingJunk=0,isBotMatch=false,botTimer=null,botDifficulty=0.6;
+let matchmakingTimer=null,matchmakingPollTimer=null;
+const JUNK_TABLE=[0,1,3,5,8,10,13,16]; // lines cleared -> junk rows sent
+const RANK_TIERS={bronze:'Bronze',silver:'Silver',gold:'Gold',platinum:'Platinum',diamond:'Diamond',master:'Master'};
+const RANK_COLORS={bronze:'rank-bronze',silver:'rank-silver',gold:'rank-gold',platinum:'rank-platinum',diamond:'rank-diamond',master:'rank-master'};
+
+// Show player rank on mode select
+async function showModeRank(){
+  if(!currentPlayer)return;
+  try{
+    const{data}=await sb.rpc('get_player_rank',{p_player_id:currentPlayer.id});
+    if(data){
+      const el=document.getElementById('mode-rank-display');
+      const tier=data.rank_tier||'bronze';
+      el.innerHTML=`<span class="rank-badge ${RANK_COLORS[tier]}">${RANK_TIERS[tier]}</span> ${data.elo} ELO · ${data.wins}W ${data.losses}L`;
+    }
+  }catch(e){}
+}
+
+// Start 1v1
+function start1v1(){
+  if(!currentPlayer){showAuthModal();return}
+  document.getElementById('matchmaking-screen').classList.add('show');
+  document.getElementById('mm-title').textContent='Finding Opponent...';
+  document.getElementById('mm-status').textContent='Searching for players near your rank';
+  document.getElementById('mm-spinner').style.display='';
+  document.getElementById('mm-cancel').style.display='';
+  joinMatchmaking();
+}
+
+async function joinMatchmaking(){
+  const{data,error}=await sb.rpc('join_matchmaking',{p_player_id:currentPlayer.id});
+  if(error){showToast('Matchmaking error');document.getElementById('matchmaking-screen').classList.remove('show');return}
+  if(data.status==='matched'){
+    foundMatch(data);
+  }else{
+    // Poll for match every 2 seconds, fallback to bot after 12 seconds
+    let elapsed=0;
+    matchmakingPollTimer=setInterval(async()=>{
+      elapsed+=2;
+      const{data:check}=await sb.rpc('check_matchmaking',{p_player_id:currentPlayer.id});
+      if(check&&check.status==='matched'){
+        clearInterval(matchmakingPollTimer);matchmakingPollTimer=null;
+        foundMatch(check);
+      }else if(elapsed>=12){
+        clearInterval(matchmakingPollTimer);matchmakingPollTimer=null;
+        startBotMatch();
+      }
+    },2000);
+  }
+}
+
+function foundMatch(data){
+  matchId=data.match_id;
+  opponentId=data.opponent_id;
+  opponentNickname=data.opponent_nickname||'Opponent';
+  playerNumber=data.player_number;
+  isBotMatch=false;
+  // Show VS screen
+  document.getElementById('mm-spinner').style.display='none';
+  document.getElementById('mm-cancel').style.display='none';
+  document.getElementById('mm-title').innerHTML=`<div style="display:flex;align-items:center;gap:20px;justify-content:center"><div class="mm-player"><div class="mm-player-name">${escapeHtml(currentPlayer.nickname)}</div></div><div class="mm-vs">VS</div><div class="mm-player"><div class="mm-player-name">${escapeHtml(opponentNickname)}</div></div></div>`;
+  document.getElementById('mm-status').textContent='Match found! Starting in 3...';
+  // Subscribe to realtime channel
+  subscribeToMatch(matchId);
+  // Countdown then start
+  let count=3;
+  const ci=setInterval(()=>{
+    count--;
+    if(count>0)document.getElementById('mm-status').textContent=`Starting in ${count}...`;
+    else{clearInterval(ci);document.getElementById('matchmaking-screen').classList.remove('show');startVersusGame(data.piece_seed)}
+  },1000);
+}
+
+function startBotMatch(){
+  isBotMatch=true;matchId='bot_'+Date.now();opponentNickname='BLOC Bot';opponentId=null;
+  document.getElementById('mm-spinner').style.display='none';
+  document.getElementById('mm-cancel').style.display='none';
+  document.getElementById('mm-title').innerHTML=`<div style="display:flex;align-items:center;gap:20px;justify-content:center"><div class="mm-player"><div class="mm-player-name">${escapeHtml(currentPlayer.nickname)}</div></div><div class="mm-vs">VS</div><div class="mm-player"><div class="mm-player-name">🤖 BLOC Bot</div></div></div>`;
+  document.getElementById('mm-status').textContent='Bot match! Starting in 2...';
+  let count=2;
+  const ci=setInterval(()=>{count--;if(count>0)document.getElementById('mm-status').textContent=`Starting in ${count}...`;else{clearInterval(ci);document.getElementById('matchmaking-screen').classList.remove('show');startVersusGame(Date.now())}},1000);
+}
+
+function startVersusGame(seed){
+  gameMode='versus';
+  isDailyGame=false;
+  rng=seededRandom(seed);
+  opponentBoard=Array.from({length:GRID},()=>Array(GRID).fill(null));
+  pendingJunk=0;
+  // Show game screen
+  document.getElementById('mode-select').classList.add('hidden');
+  const gs=document.getElementById('game-screen');gs.style.display='flex';
+  document.getElementById('timer-card').style.display='none';
+  document.getElementById('lines-card').style.display='';
+  document.getElementById('mode-badge-display').className='mode-badge blitz-badge';
+  document.getElementById('mode-badge-display').style.borderColor='rgba(255,106,106,.3)';
+  document.getElementById('mode-badge-display').style.color='var(--c6)';
+  document.getElementById('mode-label').textContent='1v1 RANKED';
+  // Show opponent preview
+  const opp=document.getElementById('opponent-preview');opp.classList.add('show');
+  document.getElementById('opp-name').textContent=opponentNickname;
+  renderOpponentBoard();
+  initGame();
+  // Start bot if bot match
+  if(isBotMatch)startBot(seed);
+}
+
+// ===== REALTIME SYNC =====
+function subscribeToMatch(mId){
+  matchChannel=sb.channel('match_'+mId);
+  matchChannel.on('broadcast',{event:'game_event'},({payload})=>{
+    if(payload.player_id===currentPlayer.id)return; // ignore own events
+    handleOpponentEvent(payload);
+  }).subscribe();
+}
+
+function broadcastEvent(type,data){
+  if(isBotMatch||!matchChannel)return;
+  matchChannel.send({type:'broadcast',event:'game_event',payload:{player_id:currentPlayer.id,event_type:type,...data}});
+}
+
+function handleOpponentEvent(ev){
+  if(ev.event_type==='board_update'){
+    opponentBoard=ev.board||opponentBoard;
+    renderOpponentBoard();
+  }else if(ev.event_type==='junk_sent'){
+    pendingJunk+=(ev.amount||0);
+    document.getElementById('opp-junk-warning').textContent=pendingJunk>0?`⚠ ${pendingJunk} JUNK INCOMING`:'';
+  }else if(ev.event_type==='game_over'){
+    // Opponent lost — we win!
+    endVersusMatch(true);
+  }
+}
+
+// ===== OPPONENT MINI-BOARD =====
+function renderOpponentBoard(){
+  const el=document.getElementById('opp-board');el.innerHTML='';
+  for(let r=0;r<GRID;r++)for(let c=0;c<GRID;c++){
+    const d=document.createElement('div');d.className='opp-cell';
+    if(opponentBoard[r][c]==='junk')d.classList.add('junk');
+    else if(opponentBoard[r][c])d.classList.add('filled');
+    el.appendChild(d);
+  }
+}
+
+// ===== JUNK ROWS =====
+function sendJunkToOpponent(linesCleared){
+  const amount=JUNK_TABLE[Math.min(linesCleared,JUNK_TABLE.length-1)];
+  if(amount<=0)return;
+  // Add combo bonus
+  const bonus=comboCount>1?Math.floor(comboCount/2):0;
+  const total=amount+bonus;
+  broadcastEvent('junk_sent',{amount:total});
+  // For bot match, apply junk to bot board
+  if(isBotMatch)applyJunkToBot(total);
+}
+
+function receiveJunk(){
+  if(pendingJunk<=0)return;
+  const rows=pendingJunk;pendingJunk=0;
+  document.getElementById('opp-junk-warning').textContent='';
+  // Push board up, add junk rows at bottom
+  for(let i=0;i<rows;i++){
+    // Shift everything up by 1
+    for(let r=0;r<GRID-1;r++)board[r]=[...board[r+1]];
+    // Create junk row with one random gap
+    const gap=Math.floor(Math.random()*GRID);
+    board[GRID-1]=Array(GRID).fill('c6');
+    board[GRID-1][gap]=null;
+  }
+  // Check if any cell in top row is filled — game over
+  if(board[0].some(c=>c!==null)){
+    // Might have overflowed
+    let overflow=false;
+    for(let r=0;r<rows&&r<GRID;r++)if(board[0].some(c=>c!==null)){overflow=true;break}
+  }
+  renderBoard();
+  sfxInvalid();hapticHeavy();
+  showToast(`${rows} junk row${rows>1?'s':''} received!`);
+}
+
+// Apply junk AFTER placing (so player can react to pending junk)
+const origTryPlace=tryPlace;
+// We override tryPlace inline in the game logic instead — see below
+
+// ===== BOT AI =====
+function startBot(seed){
+  let botRng=seededRandom(seed+999);
+  let botPieces=[randomBotPiece(botRng),randomBotPiece(botRng),randomBotPiece(botRng)];
+  let botLines=0;
+  
+  botTimer=setInterval(()=>{
+    // Bot places a piece every 1.5-3 seconds based on difficulty
+    const delay=1500+Math.random()*1500*(1-botDifficulty);
+    // Find a valid placement
+    let placed=false;
+    for(let pi=0;pi<3;pi++){
+      if(!botPieces[pi])continue;
+      const p=botPieces[pi];
+      // Try random positions, pick first valid
+      const positions=[];
+      for(let r=0;r<GRID;r++)for(let c=0;c<GRID;c++){
+        if(canPlaceOnBoard(p,r,c,opponentBoard))positions.push({r,c});
+      }
+      if(positions.length>0){
+        // Smart bot: prefer positions that complete rows
+        positions.sort((a,b)=>scoreBotPosition(b,p,opponentBoard)-scoreBotPosition(a,p,opponentBoard));
+        const pos=Math.random()<botDifficulty?positions[0]:positions[Math.floor(Math.random()*Math.min(3,positions.length))];
+        // Place on bot's board
+        for(let pr=0;pr<p.shape.length;pr++)for(let pc=0;pc<p.shape[pr].length;pc++){
+          if(!p.shape[pr][pc])continue;
+          opponentBoard[pos.r+pr][pos.c+pc]=p.color;
+        }
+        // Check clears
+        let cleared=0;
+        for(let r=0;r<GRID;r++)if(opponentBoard[r].every(c=>c!==null)){
+          for(let c2=0;c2<GRID;c2++)opponentBoard[r][c2]=null;cleared++}
+        for(let c=0;c<GRID;c++)if(opponentBoard.every(row=>row[c]!==null)){
+          for(let r=0;r<GRID;r++)opponentBoard[r][c]=null;cleared++}
+        botLines+=cleared;
+        if(cleared>0){
+          // Bot sends junk to player
+          const junk=JUNK_TABLE[Math.min(cleared,JUNK_TABLE.length-1)];
+          if(junk>0){pendingJunk+=junk;document.getElementById('opp-junk-warning').textContent=`⚠ ${pendingJunk} JUNK INCOMING`}
+        }
+        botPieces[pi]=null;
+        if(botPieces.every(p=>p===null))botPieces=[randomBotPiece(botRng),randomBotPiece(botRng),randomBotPiece(botRng)];
+        renderOpponentBoard();
+        placed=true;break;
+      }
+    }
+    if(!placed){
+      // Bot can't place — bot loses
+      clearInterval(botTimer);botTimer=null;
+      endVersusMatch(true);
+    }
+  },2000);
+}
+
+function randomBotPiece(rng){return{shape:PIECE_SHAPES[Math.floor(rng()*PIECE_SHAPES.length)],color:COLORS[Math.floor(rng()*COLORS.length)]}}
+function canPlaceOnBoard(p,ar,ac,b){for(let pr=0;pr<p.shape.length;pr++)for(let pc=0;pc<p.shape[pr].length;pc++){if(!p.shape[pr][pc])continue;const r=ar+pr,c=ac+pc;if(r<0||r>=GRID||c<0||c>=GRID||b[r][c])return false}return true}
+function scoreBotPosition(pos,piece,b){
+  let score=0;
+  // Simulate placement
+  const sim=b.map(r=>[...r]);
+  for(let pr=0;pr<piece.shape.length;pr++)for(let pc=0;pc<piece.shape[pr].length;pc++){
+    if(!piece.shape[pr][pc])continue;sim[pos.r+pr][pos.c+pc]=piece.color}
+  // Count completable rows/cols
+  for(let r=0;r<GRID;r++){const filled=sim[r].filter(c=>c!==null).length;if(filled===GRID)score+=100;else score+=filled*2}
+  for(let c=0;c<GRID;c++){let filled=0;for(let r=0;r<GRID;r++)if(sim[r][c])filled++;if(filled===GRID)score+=100;else score+=filled*2}
+  // Prefer lower positions
+  score+=pos.r*3;
+  return score;
+}
+
+function applyJunkToBot(amount){
+  for(let i=0;i<amount;i++){
+    for(let r=0;r<GRID-1;r++)opponentBoard[r]=[...opponentBoard[r+1]];
+    const gap=Math.floor(Math.random()*GRID);
+    opponentBoard[GRID-1]=Array(GRID).fill('c6');
+    opponentBoard[GRID-1][gap]=null;
+  }
+  renderOpponentBoard();
+}
+
+// ===== MATCH END =====
+async function endVersusMatch(won){
+  if(botTimer){clearInterval(botTimer);botTimer=null}
+  if(matchChannel){matchChannel.unsubscribe();matchChannel=null}
+  const card=document.getElementById('match-result-card');
+  card.className='match-result-card '+(won?'win':'lose');
+  document.getElementById('result-title').className='result-title '+(won?'win-title':'lose-title');
+  document.getElementById('result-title').textContent=won?'VICTORY':'DEFEAT';
+  
+  if(!isBotMatch&&currentPlayer){
+    // Submit match result
+    const winnerId=won?currentPlayer.id:opponentId;
+    const{data}=await sb.rpc('finish_match',{
+      p_match_id:matchId,p_winner_id:winnerId,
+      p_player1_score:playerNumber===1?score:0,p_player2_score:playerNumber===2?score:0,
+      p_player1_lines:playerNumber===1?totalLines:0,p_player2_lines:playerNumber===2?totalLines:0
+    });
+    if(data&&!data.error){
+      const change=data.elo_change||0;
+      document.getElementById('result-elo').textContent=(won?'+':'-')+change+' ELO';
+      document.getElementById('result-elo').className='result-elo '+(won?'positive':'negative');
+      const newElo=won?data.winner_new_elo:data.loser_new_elo;
+      const tier=won?data.winner_tier:data.loser_tier;
+      document.getElementById('result-rank').innerHTML=`<span class="rank-badge ${RANK_COLORS[tier||'bronze']}">${RANK_TIERS[tier||'bronze']}</span> ${newElo} ELO`;
+    }else{
+      document.getElementById('result-elo').textContent='';
+      document.getElementById('result-rank').textContent='';
+    }
+  }else{
+    document.getElementById('result-elo').textContent=won?'Bot defeated!':'Bot wins';
+    document.getElementById('result-elo').className='result-elo '+(won?'positive':'negative');
+    document.getElementById('result-rank').textContent='Play ranked to earn ELO';
+  }
+  
+  document.getElementById('result-stats').textContent=`Score: ${score.toLocaleString()} · Lines: ${totalLines}`;
+  document.getElementById('match-result').classList.add('show');
+  document.getElementById('game-over').classList.remove('show');
+  document.getElementById('opponent-preview').classList.remove('show');
+  
+  if(won)sfxBoardClear();else sfxGameOver();
+}
+
+function cancelMatchmaking(){
+  if(matchmakingPollTimer){clearInterval(matchmakingPollTimer);matchmakingPollTimer=null}
+  if(currentPlayer)sb.rpc('cancel_matchmaking',{p_player_id:currentPlayer.id});
+  document.getElementById('matchmaking-screen').classList.remove('show');
+}
+
+function rematch1v1(){
+  document.getElementById('match-result').classList.remove('show');
+  start1v1();
+}
+
+// Override backToMenu to clean up multiplayer
+const origBackToMenu=backToMenu;
+backToMenu=function(){
+  if(botTimer){clearInterval(botTimer);botTimer=null}
+  if(matchChannel){matchChannel.unsubscribe();matchChannel=null}
+  if(matchmakingPollTimer){clearInterval(matchmakingPollTimer);matchmakingPollTimer=null}
+  document.getElementById('matchmaking-screen').classList.remove('show');
+  document.getElementById('match-result').classList.remove('show');
+  document.getElementById('opponent-preview').classList.remove('show');
+  stopBlitzTimer();
+  document.getElementById('game-over').classList.remove('show');
+  document.getElementById('game-screen').style.display='none';
+  document.getElementById('mode-select').classList.remove('hidden');
+  showModeRank();
+};
+
+// Override showGameOver for versus mode
+const origShowGameOver=showGameOver;
+showGameOver=function(){
+  if(gameMode==='versus'){
+    // In versus, game over means you lost
+    broadcastEvent('game_over',{});
+    endVersusMatch(false);
+    return;
+  }
+  origShowGameOver();
+};
+
+// Hook junk receiving into tryPlace
+const origTryPlaceRef=tryPlace;
+const wrapTryPlace=function(si,ar,ac){
+  const result=origTryPlaceRef(si,ar,ac);
+  if(result&&gameMode==='versus'){
+    // After successful placement, receive pending junk
+    setTimeout(()=>{
+      if(pendingJunk>0)receiveJunk();
+    },200);
+    // Send board state to opponent
+    broadcastEvent('board_update',{board:board});
+    // Check if lines were cleared and send junk
+    // (linesCleared is calculated inside tryPlace, we re-check board)
+  }
+  return result;
+};
+// Note: We can't easily override tryPlace since it's called everywhere.
+// Instead, we'll hook into the scoring — after addScore, check for junk sending.
+
+// Patch: send junk after line clears in versus mode
+const origAddScore=addScore;
+addScore=function(amount,r,c){
+  origAddScore(amount,r,c);
+  if(gameMode==='versus'&&amount>50){
+    // Estimate lines from score
+    // lineBonus table: 100,300,600,1000 → 1,2,3,4 lines
+    let estLines=0;
+    if(amount>=1000)estLines=4;else if(amount>=600)estLines=3;else if(amount>=300)estLines=2;else if(amount>=100)estLines=1;
+    if(estLines>0)sendJunkToOpponent(estLines);
+    // Receive pending junk after a short delay
+    setTimeout(()=>{if(pendingJunk>0&&gameMode==='versus')receiveJunk()},300);
+    broadcastEvent('board_update',{board:board});
+  }
+};
+
+// Load rank on mode select
+setTimeout(()=>showModeRank(),500);
 </script>
 </body>
 </html>
