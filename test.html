@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLOC — Backend Test Suite</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { background: #0a0a0f; color: #e8e8f0; font-family: monospace; padding: 20px; max-width: 600px; margin: 0 auto; font-size: 13px; }
+  h1 { color: #7c6aff; font-size: 18px; margin-bottom: 20px; }
+  .test { margin: 12px 0; padding: 12px; background: #12121a; border: 1px solid #2a2a3d; border-radius: 8px; }
+  .test-name { color: #6aaeff; font-weight: bold; margin-bottom: 6px; }
+  .pass { color: #6affd4; }
+  .fail { color: #ff6a6a; }
+  .info { color: #5a5a7a; font-size: 11px; word-break: break-all; }
+  button { background: #7c6aff; border: none; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-family: monospace; font-size: 13px; margin: 10px 0; }
+  button:hover { opacity: 0.8; }
+  #output { white-space: pre-wrap; }
+  .section { color: #ffb86a; font-size: 14px; font-weight: bold; margin-top: 20px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<h1>BLOC Backend Test Suite</h1>
+<button onclick="runAllTests()">▶ RUN ALL TESTS</button>
+<div id="output"></div>
+
+<script>
+const SUPABASE_URL = 'https://amjzpoamcbqlgvkxsscz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtanpwb2FtY2JxbGd2a3hzc2N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMzY3NDQsImV4cCI6MjA4ODcxMjc0NH0.hwAL4JQIKcUlu3AxJ4cCRUn_ikDERTkWf4UlnqlyjxU';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const out = document.getElementById('output');
+function log(msg, cls) {
+  const d = document.createElement('div');
+  d.className = cls || '';
+  d.textContent = msg;
+  out.appendChild(d);
+}
+function section(msg) {
+  const d = document.createElement('div');
+  d.className = 'section';
+  d.textContent = msg;
+  out.appendChild(d);
+}
+function result(name, passed, detail) {
+  const d = document.createElement('div');
+  d.className = 'test';
+  d.innerHTML = `<div class="test-name">${name}</div><div class="${passed ? 'pass' : 'fail'}">${passed ? '✓ PASS' : '✗ FAIL'}</div><div class="info">${detail || ''}</div>`;
+  out.appendChild(d);
+  return passed;
+}
+
+const testNickname = 'test_' + Math.random().toString(36).substr(2, 6);
+const testPin = '1234';
+let testPlayerId = null;
+
+async function runAllTests() {
+  out.innerHTML = '';
+  log('Starting tests with nickname: ' + testNickname);
+  log('');
+
+  let allPassed = true;
+
+  // ===== 1. CONNECTION =====
+  section('1. CONNECTION');
+  try {
+    const { data, error } = await sb.from('players').select('count', { count: 'exact', head: true });
+    if (error) throw error;
+    result('Supabase connection', true, 'Connected to ' + SUPABASE_URL);
+  } catch(e) {
+    allPassed = false;
+    result('Supabase connection', false, e.message || JSON.stringify(e));
+  }
+
+  // ===== 2. CHECK TABLES EXIST =====
+  section('2. TABLES');
+  for (const table of ['players', 'scores', 'friends']) {
+    try {
+      const { data, error } = await sb.from(table).select('*').limit(0);
+      if (error) throw error;
+      result(`Table "${table}" exists`, true);
+    } catch(e) {
+      allPassed = false;
+      result(`Table "${table}" exists`, false, e.message);
+    }
+  }
+
+  // ===== 3. REGISTER =====
+  section('3. REGISTRATION');
+  try {
+    const { data, error } = await sb.rpc('register_player', { p_nickname: testNickname, p_pin: testPin });
+    if (error) throw error;
+    if (data && data.error) throw new Error(data.error);
+    if (data && data.id) {
+      testPlayerId = data.id;
+      result('Register player', true, `ID: ${data.id}, Nickname: ${data.nickname}`);
+    } else {
+      throw new Error('No player ID returned: ' + JSON.stringify(data));
+    }
+  } catch(e) {
+    allPassed = false;
+    result('Register player', false, e.message);
+  }
+
+  // ===== 4. DUPLICATE REGISTER =====
+  try {
+    const { data, error } = await sb.rpc('register_player', { p_nickname: testNickname, p_pin: testPin });
+    if (error) throw error;
+    if (data && data.error === 'Nickname already taken') {
+      result('Duplicate nickname rejected', true, data.error);
+    } else {
+      result('Duplicate nickname rejected', false, 'Expected error, got: ' + JSON.stringify(data));
+    }
+  } catch(e) {
+    result('Duplicate nickname rejected', false, e.message);
+  }
+
+  // ===== 5. LOGIN =====
+  section('4. LOGIN');
+  try {
+    const { data, error } = await sb.rpc('login_player', { p_nickname: testNickname, p_pin: testPin });
+    if (error) throw error;
+    if (data && data.error) throw new Error(data.error);
+    if (data && data.id === testPlayerId) {
+      result('Login with correct PIN', true, `Matched ID: ${data.id}`);
+    } else {
+      throw new Error('ID mismatch: ' + JSON.stringify(data));
+    }
+  } catch(e) {
+    allPassed = false;
+    result('Login with correct PIN', false, e.message);
+  }
+
+  // Wrong PIN
+  try {
+    const { data, error } = await sb.rpc('login_player', { p_nickname: testNickname, p_pin: '9999' });
+    if (error) throw error;
+    if (data && data.error === 'Invalid nickname or PIN') {
+      result('Wrong PIN rejected', true);
+    } else {
+      result('Wrong PIN rejected', false, 'Expected error, got: ' + JSON.stringify(data));
+    }
+  } catch(e) {
+    result('Wrong PIN rejected', false, e.message);
+  }
+
+  // ===== 6. SCORE SUBMISSION =====
+  section('5. SCORE SUBMISSION');
+  if (testPlayerId) {
+    // Submit 3 scores
+    const scores = [
+      { score: 1500, lines: 12, daily: false },
+      { score: 3200, lines: 28, daily: true, day: 800 },
+      { score: 750, lines: 5, daily: false },
+    ];
+    for (const s of scores) {
+      try {
+        const { data, error } = await sb.rpc('submit_score', {
+          p_player_id: testPlayerId,
+          p_score: s.score,
+          p_lines: s.lines,
+          p_is_daily: s.daily,
+          p_day_number: s.day || null
+        });
+        if (error) throw error;
+        if (data && data.id) {
+          result(`Submit score ${s.score}`, true, `Rank: ${data.rank}`);
+        } else {
+          throw new Error('No score ID returned: ' + JSON.stringify(data));
+        }
+      } catch(e) {
+        allPassed = false;
+        result(`Submit score ${s.score}`, false, e.message);
+      }
+    }
+  } else {
+    result('Score submission', false, 'Skipped — no player ID from registration');
+  }
+
+  // ===== 7. LEADERBOARDS =====
+  section('6. LEADERBOARDS');
+
+  // All-time
+  try {
+    const { data, error } = await sb.rpc('get_leaderboard_alltime', { p_limit: 10 });
+    if (error) throw error;
+    if (data && Array.isArray(data) && data.length > 0) {
+      const hasTestUser = data.some(e => e.nickname === testNickname);
+      result('All-time leaderboard', hasTestUser, `${data.length} entries. Test user present: ${hasTestUser}. Top score: ${data[0].score}`);
+    } else {
+      result('All-time leaderboard', false, 'Empty or invalid: ' + JSON.stringify(data));
+    }
+  } catch(e) {
+    allPassed = false;
+    result('All-time leaderboard', false, e.message);
+  }
+
+  // Daily (use day 800 which we submitted a score for)
+  try {
+    const { data, error } = await sb.rpc('get_leaderboard_daily', { p_day_number: 800, p_limit: 10 });
+    if (error) throw error;
+    if (data && Array.isArray(data) && data.length > 0) {
+      result('Daily leaderboard (day 800)', true, `${data.length} entries. Top: ${data[0].nickname} - ${data[0].score}`);
+    } else {
+      result('Daily leaderboard (day 800)', false, 'Empty: ' + JSON.stringify(data));
+    }
+  } catch(e) {
+    allPassed = false;
+    result('Daily leaderboard (day 800)', false, e.message);
+  }
+
+  // Friends (should show self at minimum)
+  if (testPlayerId) {
+    try {
+      const { data, error } = await sb.rpc('get_leaderboard_friends', { p_player_id: testPlayerId, p_limit: 10 });
+      if (error) throw error;
+      if (data && Array.isArray(data) && data.length > 0) {
+        result('Friends leaderboard', true, `${data.length} entries (includes self)`);
+      } else {
+        result('Friends leaderboard', false, 'Empty — self not showing: ' + JSON.stringify(data));
+      }
+    } catch(e) {
+      allPassed = false;
+      result('Friends leaderboard', false, e.message);
+    }
+  }
+
+  // ===== 8. PLAYER PERSISTENCE CHECK =====
+  section('7. PERSISTENCE');
+  try {
+    const { data, error } = await sb.from('players').select('*').eq('nickname', testNickname).single();
+    if (error) throw error;
+    if (data && data.id === testPlayerId) {
+      result('Player stored in DB', true, `ID: ${data.id}, Created: ${data.created_at}`);
+    } else {
+      throw new Error('Not found');
+    }
+  } catch(e) {
+    allPassed = false;
+    result('Player stored in DB', false, e.message);
+  }
+
+  // Check scores stored
+  try {
+    const { data, error } = await sb.from('scores').select('*').eq('player_id', testPlayerId);
+    if (error) throw error;
+    result(`Scores stored in DB`, data && data.length === 3, `${data ? data.length : 0} scores found (expected 3)`);
+  } catch(e) {
+    allPassed = false;
+    result('Scores stored in DB', false, e.message);
+  }
+
+  // ===== 9. CLEANUP =====
+  section('8. CLEANUP');
+  try {
+    // Delete test scores
+    await sb.from('scores').delete().eq('player_id', testPlayerId);
+    // Delete test player
+    await sb.from('players').delete().eq('id', testPlayerId);
+    result('Test data cleaned up', true, `Removed player ${testNickname} and scores`);
+  } catch(e) {
+    result('Test data cleaned up', false, e.message);
+  }
+
+  // ===== SUMMARY =====
+  log('');
+  section('SUMMARY');
+  log(allPassed ? '✓ ALL TESTS PASSED' : '✗ SOME TESTS FAILED — check red items above', allPassed ? 'pass' : 'fail');
+}
+</script>
+</body>
+</html>
