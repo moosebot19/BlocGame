@@ -10,6 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <title>BLOC — Premium Block Puzzle</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Unbounded:wght@400;600;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -418,15 +419,26 @@
   .piece-cell.empty-cell { background: transparent; }
 
   /* Floating drag piece — top-left aligns with cursor */
+  /* Floating drag piece — offset above finger so board is visible */
   #drag-piece {
     position: fixed;
     pointer-events: none;
     z-index: 1000;
     display: none;
-    transform: translate(-50%, -50%);
   }
   #drag-piece .piece-grid .piece-cell {
     border-radius: 7px;
+  }
+
+  /* Ghost indicator on board showing where piece will land */
+  .cell.drop-ghost {
+    opacity: 0.4;
+    border: 2px solid rgba(255,255,255,0.35) !important;
+  }
+  .cell.drop-ghost-invalid {
+    opacity: 0.25;
+    border: 2px dashed rgba(255,100,100,0.3) !important;
+    background: rgba(255,100,100,0.05) !important;
   }
 
   /* Score popup */
@@ -721,6 +733,235 @@
   }
   .help-text { font-size: 11px; line-height: 1.7; color: var(--muted); }
   .help-text strong { color: var(--text); }
+
+  /* Auth + Leaderboard Modals */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(10px);
+    z-index: 600;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .modal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 28px;
+    max-width: 360px;
+    width: 92%;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .modal-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--c1), var(--c2), var(--c3));
+    border-radius: 24px 24px 0 0;
+  }
+
+  .modal-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .modal-close:hover { color: var(--text); border-color: var(--accent); }
+
+  .input-field {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    margin-bottom: 10px;
+    transition: border-color 0.2s;
+  }
+  .input-field:focus { border-color: var(--accent); }
+  .input-field::placeholder { color: var(--muted); }
+
+  .input-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .auth-error {
+    color: var(--c6);
+    font-size: 11px;
+    margin-bottom: 10px;
+    min-height: 16px;
+  }
+
+  .auth-toggle {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+  .auth-toggle a {
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .auth-toggle a:hover { text-decoration: underline; }
+
+  .player-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+    font-size: 12px;
+  }
+  .player-badge .player-name {
+    color: var(--c3);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .player-badge .player-logout {
+    margin-left: auto;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 10px;
+  }
+  .player-badge .player-logout:hover { color: var(--c6); }
+
+  /* Leaderboard tabs */
+  .lb-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 3px;
+  }
+  .lb-tab {
+    flex: 1;
+    padding: 8px 4px;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .lb-tab.active {
+    background: var(--accent);
+    color: white;
+  }
+  .lb-tab:hover:not(.active) { color: var(--text); }
+
+  /* Leaderboard list */
+  .lb-list {
+    list-style: none;
+    max-height: 350px;
+    overflow-y: auto;
+  }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    gap: 10px;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank {
+    width: 28px;
+    text-align: center;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .lb-row:nth-child(1) .lb-rank { color: var(--c4); }
+  .lb-row:nth-child(2) .lb-rank { color: var(--c5); }
+  .lb-row:nth-child(3) .lb-rank { color: var(--c2); }
+  .lb-name {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lb-name.is-me { color: var(--c3); font-weight: 700; }
+  .lb-score {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .lb-lines {
+    font-size: 10px;
+    color: var(--muted);
+    width: 40px;
+    text-align: right;
+  }
+  .lb-empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 30px 0;
+  }
+  .lb-loading {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 30px 0;
+  }
+
+  /* Friend add section */
+  .friend-add {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .friend-add .input-field { margin-bottom: 0; flex: 1; font-size: 11px; padding: 8px 10px; }
+  .friend-add-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    color: white;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
 </style>
 </head>
 <body>
@@ -729,6 +970,7 @@
   <div class="logo">BL<span>○</span>C</div>
   <div class="header-actions">
     <div class="btn-icon sound-on" id="sound-btn" title="Toggle sound">♪</div>
+    <div class="btn-icon" id="lb-btn" title="Leaderboard">⊡</div>
     <div class="btn-icon" id="help-btn" title="How to play">?</div>
   </div>
 </header>
@@ -1209,38 +1451,78 @@ function renderDragPiece(piece) {
   dragEl.appendChild(grid);
 }
 
+// Drag offset — piece floats above finger
+const DRAG_OFFSET_Y = -120;
+
 function moveDragPiece(x, y) {
   const dragEl = document.getElementById('drag-piece');
-  dragEl.style.left = x + 'px';
-  dragEl.style.top = y + 'px';
+  const dragRect = dragEl.getBoundingClientRect();
+  const pieceW = dragRect.width || 50;
+  const pieceH = dragRect.height || 50;
+  // Position piece centered horizontally on finger, offset above vertically
+  dragEl.style.left = (x - pieceW / 2) + 'px';
+  dragEl.style.top = (y + DRAG_OFFSET_Y - pieceH) + 'px';
+
+  // Update ghost on board — find cell under the top-left of floating piece
+  updateDropGhost();
+}
+
+let currentGhostAnchor = null;
+
+function updateDropGhost() {
+  clearDropGhost();
+  const dragEl = document.getElementById('drag-piece');
+  const dragRect = dragEl.getBoundingClientRect();
+  if (dragRect.width === 0) return;
+
+  const cellSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell')) || 42;
+  const halfCell = cellSize / 2;
+
+  // Find board cell under the top-left of floating piece
+  const cell = getBoardCellAt(dragRect.left + halfCell, dragRect.top + halfCell);
+  if (!cell || dragPieceIndex === null || !pieces[dragPieceIndex]) {
+    currentGhostAnchor = null;
+    return;
+  }
+
+  const r = parseInt(cell.dataset.r);
+  const c = parseInt(cell.dataset.c);
+  currentGhostAnchor = { r, c };
+  const piece = pieces[dragPieceIndex];
+  const valid = canPlace(piece, r, c);
+
+  for (let pr = 0; pr < piece.shape.length; pr++) {
+    for (let pc = 0; pc < piece.shape[pr].length; pc++) {
+      if (!piece.shape[pr][pc]) continue;
+      const gr = r + pr;
+      const gc = c + pc;
+      if (gr < 0 || gr >= GRID || gc < 0 || gc >= GRID) continue;
+      const boardCell = getCell(gr, gc);
+      if (boardCell && !board[gr][gc]) {
+        boardCell.classList.add(valid ? 'drop-ghost' : 'drop-ghost-invalid');
+        if (valid) boardCell.classList.add(piece.color);
+      }
+    }
+  }
+}
+
+function clearDropGhost() {
+  document.querySelectorAll('.cell.drop-ghost, .cell.drop-ghost-invalid').forEach(c => {
+    const r = parseInt(c.dataset.r);
+    const col = parseInt(c.dataset.c);
+    c.classList.remove('drop-ghost', 'drop-ghost-invalid');
+    if (!board[r][col]) COLORS.forEach(clr => c.classList.remove(clr));
+  });
+  currentGhostAnchor = null;
 }
 
 function onDragMove(e) { if (dragActive) moveDragPiece(e.clientX, e.clientY); }
 function onTouchMove(e) { if (dragActive) { e.preventDefault(); moveDragPiece(e.touches[0].clientX, e.touches[0].clientY); } }
 
-function getDropAnchor(cursorX, cursorY) {
-  // The drag piece is centered on cursor via translate(-50%, -50%)
-  // Calculate where the top-left of the floating piece visually sits
-  const dragEl = document.getElementById('drag-piece');
-  const dragRect = dragEl.getBoundingClientRect();
-  // Find the board cell under the top-left corner of the floating piece
-  const topLeftX = dragRect.left + 5; // slight inset to hit the first cell
-  const topLeftY = dragRect.top + 5;
-  const cell = getBoardCellAt(topLeftX, topLeftY);
-  if (cell) return cell;
-  // Fallback: try the center of the first cell area
-  const cellSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell')) || 42;
-  const halfCell = cellSize / 2;
-  return getBoardCellAt(dragRect.left + halfCell, dragRect.top + halfCell);
-}
-
 function onDragEnd(e) {
   if (!dragActive) return;
-  const cell = getDropAnchor(e.clientX, e.clientY);
-  if (cell && dragPieceIndex !== null) {
-    const r = parseInt(cell.dataset.r);
-    const c = parseInt(cell.dataset.c);
-    if (!tryPlace(dragPieceIndex, r, c)) {
+  if (currentGhostAnchor && dragPieceIndex !== null) {
+    if (!tryPlace(dragPieceIndex, currentGhostAnchor.r, currentGhostAnchor.c)) {
       showInvalidFeedback();
     }
   }
@@ -1251,12 +1533,8 @@ function onDragEnd(e) {
 
 function onTouchEnd(e) {
   if (!dragActive) return;
-  const touch = e.changedTouches[0];
-  const cell = getDropAnchor(touch.clientX, touch.clientY);
-  if (cell && dragPieceIndex !== null) {
-    const r = parseInt(cell.dataset.r);
-    const c = parseInt(cell.dataset.c);
-    if (!tryPlace(dragPieceIndex, r, c)) {
+  if (currentGhostAnchor && dragPieceIndex !== null) {
+    if (!tryPlace(dragPieceIndex, currentGhostAnchor.r, currentGhostAnchor.c)) {
       showInvalidFeedback();
     }
   }
@@ -1268,6 +1546,7 @@ function onTouchEnd(e) {
 function endDrag() {
   dragActive = false;
   justDragged = true;
+  clearDropGhost();
   document.getElementById('drag-piece').style.display = 'none';
   if (dragPieceIndex !== null) document.getElementById(`slot-${dragPieceIndex}`)?.classList.remove('dragging');
   dragPieceIndex = null;
@@ -1455,6 +1734,7 @@ function tryPlace(slotIndex, anchorR, anchorC) {
 
   selectedPiece = null;
   selectedSlot = null;
+  clearDropGhost();
   return true;
 }
 
@@ -1615,6 +1895,9 @@ function showGameOver() {
   if (score > 20000) msg = '🔥 Legendary!';
   document.getElementById('final-message').textContent = msg;
   document.getElementById('game-over').classList.add('show');
+
+  // Submit score to server
+  submitScoreToServer(score, totalLines, isDailyGame, isDailyGame ? dayNumber : null);
 }
 
 function restartGame() {
@@ -1698,6 +1981,212 @@ document.addEventListener('touchend', function(e) {
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 
 init();
+</script>
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="auth-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal-card">
+    <div class="modal-close" onclick="document.getElementById('auth-modal').classList.remove('show')">✕</div>
+    <div id="auth-register">
+      <div class="modal-title">Create Account</div>
+      <label class="input-label">Nickname</label>
+      <input class="input-field" id="reg-nickname" placeholder="Pick a name" maxlength="20" autocomplete="off">
+      <label class="input-label">PIN (4-8 digits)</label>
+      <input class="input-field" id="reg-pin" type="password" placeholder="Simple PIN to log back in" maxlength="8" inputmode="numeric">
+      <div class="auth-error" id="reg-error"></div>
+      <button class="btn-primary" id="reg-submit-btn" onclick="registerPlayer()">CREATE</button>
+      <div class="auth-toggle">Already have an account? <a onclick="showAuthLogin()">Log in</a></div>
+    </div>
+    <div id="auth-login" style="display:none">
+      <div class="modal-title">Log In</div>
+      <label class="input-label">Nickname</label>
+      <input class="input-field" id="login-nickname" placeholder="Your nickname" maxlength="20" autocomplete="off">
+      <label class="input-label">PIN</label>
+      <input class="input-field" id="login-pin" type="password" placeholder="Your PIN" maxlength="8" inputmode="numeric">
+      <div class="auth-error" id="login-error"></div>
+      <button class="btn-primary" onclick="loginPlayer()">LOG IN</button>
+      <div class="auth-toggle">Need an account? <a onclick="showAuthRegister()">Register</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- Leaderboard Modal -->
+<div class="modal-overlay" id="lb-modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal-card">
+    <div class="modal-close" onclick="document.getElementById('lb-modal').classList.remove('show')">✕</div>
+    <div class="modal-title">Leaderboard</div>
+    <div id="lb-player-badge"></div>
+    <div class="lb-tabs">
+      <div class="lb-tab active" data-tab="alltime" onclick="switchLbTab('alltime')">ALL TIME</div>
+      <div class="lb-tab" data-tab="daily" onclick="switchLbTab('daily')">DAILY</div>
+      <div class="lb-tab" data-tab="friends" onclick="switchLbTab('friends')">FRIENDS</div>
+    </div>
+    <div id="lb-content"><div class="lb-loading">Loading...</div></div>
+    <div id="lb-friend-add" style="display:none">
+      <div class="friend-add">
+        <input class="input-field" id="friend-name-input" placeholder="Add friend by nickname">
+        <button class="friend-add-btn" onclick="addFriend()">ADD</button>
+      </div>
+      <div class="auth-error" id="friend-error" style="margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== SUPABASE CLIENT =====
+const SUPABASE_URL = 'https://amjzpoamcbqlgvkxsscz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtanpwb2FtY2JxbGd2a3hzc2N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMzY3NDQsImV4cCI6MjA4ODcxMjc0NH0.hwAL4JQIKcUlu3AxJ4cCRUn_ikDERTkWf4UlnqlyjxU';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentPlayer = null;
+let currentLbTab = 'alltime';
+
+function loadPlayer() {
+  const saved = localStorage.getItem('bloc_player');
+  if (saved) { try { currentPlayer = JSON.parse(saved); } catch(e) {} }
+}
+function savePlayer(p) { currentPlayer = p; localStorage.setItem('bloc_player', JSON.stringify(p)); }
+function clearPlayerSession() { currentPlayer = null; localStorage.removeItem('bloc_player'); }
+
+// ===== AUTH =====
+function showAuthRegister() {
+  document.getElementById('auth-register').style.display = '';
+  document.getElementById('auth-login').style.display = 'none';
+  document.getElementById('reg-error').textContent = '';
+}
+function showAuthLogin() {
+  document.getElementById('auth-register').style.display = 'none';
+  document.getElementById('auth-login').style.display = '';
+  document.getElementById('login-error').textContent = '';
+}
+function showAuthModal() {
+  if (currentPlayer) { showLeaderboard(); return; }
+  document.getElementById('auth-modal').classList.add('show');
+  showAuthRegister();
+}
+
+async function registerPlayer() {
+  const nickname = document.getElementById('reg-nickname').value.trim();
+  const pin = document.getElementById('reg-pin').value.trim();
+  const errEl = document.getElementById('reg-error');
+  if (!nickname || nickname.length < 2) { errEl.textContent = 'Nickname must be 2+ characters'; return; }
+  if (!pin || pin.length < 4) { errEl.textContent = 'PIN must be 4+ digits'; return; }
+  if (!/^\d+$/.test(pin)) { errEl.textContent = 'PIN must be numbers only'; return; }
+  errEl.textContent = '';
+  document.getElementById('reg-submit-btn').textContent = '...';
+  const { data, error } = await sb.rpc('register_player', { p_nickname: nickname, p_pin: pin });
+  document.getElementById('reg-submit-btn').textContent = 'CREATE';
+  if (error) { errEl.textContent = 'Server error. Try again.'; return; }
+  if (data && data.error) { errEl.textContent = data.error; return; }
+  savePlayer({ id: data.id, nickname: data.nickname });
+  document.getElementById('auth-modal').classList.remove('show');
+  showToast('Welcome, ' + data.nickname + '!');
+}
+
+async function loginPlayer() {
+  const nickname = document.getElementById('login-nickname').value.trim();
+  const pin = document.getElementById('login-pin').value.trim();
+  const errEl = document.getElementById('login-error');
+  if (!nickname) { errEl.textContent = 'Enter your nickname'; return; }
+  if (!pin) { errEl.textContent = 'Enter your PIN'; return; }
+  errEl.textContent = '';
+  const { data, error } = await sb.rpc('login_player', { p_nickname: nickname, p_pin: pin });
+  if (error) { errEl.textContent = 'Server error. Try again.'; return; }
+  if (data && data.error) { errEl.textContent = data.error; return; }
+  savePlayer({ id: data.id, nickname: data.nickname });
+  document.getElementById('auth-modal').classList.remove('show');
+  showToast('Welcome back, ' + data.nickname + '!');
+}
+
+function logoutPlayer() {
+  clearPlayerSession();
+  document.getElementById('lb-modal').classList.remove('show');
+  showToast('Logged out');
+}
+
+// ===== SCORE SUBMISSION =====
+async function submitScoreToServer(finalScore, finalLines, daily, dayNum) {
+  if (!currentPlayer) return;
+  try {
+    await sb.rpc('submit_score', {
+      p_player_id: currentPlayer.id,
+      p_score: finalScore,
+      p_lines: finalLines,
+      p_is_daily: daily,
+      p_day_number: dayNum || null
+    });
+  } catch(e) {}
+}
+
+// ===== LEADERBOARD =====
+document.getElementById('lb-btn').addEventListener('click', () => {
+  if (!currentPlayer) showAuthModal();
+  else showLeaderboard();
+});
+
+function showLeaderboard() {
+  document.getElementById('lb-modal').classList.add('show');
+  const badge = document.getElementById('lb-player-badge');
+  if (currentPlayer) {
+    badge.innerHTML = '<div class="player-badge"><span>👤</span><span class="player-name">' +
+      escapeHtml(currentPlayer.nickname) + '</span><span class="player-logout" onclick="logoutPlayer()">LOG OUT</span></div>';
+  } else { badge.innerHTML = ''; }
+  switchLbTab(currentLbTab);
+}
+
+function switchLbTab(tab) {
+  currentLbTab = tab;
+  document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('lb-friend-add').style.display = tab === 'friends' ? '' : 'none';
+  loadLeaderboard(tab);
+}
+
+async function loadLeaderboard(tab) {
+  const content = document.getElementById('lb-content');
+  content.innerHTML = '<div class="lb-loading">Loading...</div>';
+  let data = null;
+  try {
+    if (tab === 'alltime') {
+      ({ data } = await sb.rpc('get_leaderboard_alltime', { p_limit: 100 }));
+    } else if (tab === 'daily') {
+      ({ data } = await sb.rpc('get_leaderboard_daily', { p_day_number: getDayNumber(), p_limit: 100 }));
+    } else if (tab === 'friends') {
+      if (!currentPlayer) { content.innerHTML = '<div class="lb-empty">Log in to see friends</div>'; return; }
+      ({ data } = await sb.rpc('get_leaderboard_friends', { p_player_id: currentPlayer.id, p_limit: 100 }));
+    }
+  } catch(e) { content.innerHTML = '<div class="lb-empty">Failed to load</div>'; return; }
+  if (!data || data.length === 0) { content.innerHTML = '<div class="lb-empty">No scores yet. Be the first!</div>'; return; }
+  const myName = currentPlayer ? currentPlayer.nickname : null;
+  let html = '<div class="lb-list">';
+  data.forEach((e, i) => {
+    const isMe = e.nickname === myName;
+    html += '<div class="lb-row"><div class="lb-rank">' + (i+1) + '</div><div class="lb-name ' +
+      (isMe ? 'is-me' : '') + '">' + escapeHtml(e.nickname) + '</div><div class="lb-score">' +
+      e.score.toLocaleString() + '</div><div class="lb-lines">' + e.lines + 'L</div></div>';
+  });
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ===== FRIENDS =====
+async function addFriend() {
+  if (!currentPlayer) return;
+  const input = document.getElementById('friend-name-input');
+  const errEl = document.getElementById('friend-error');
+  const name = input.value.trim();
+  if (!name) { errEl.textContent = 'Enter a nickname'; return; }
+  errEl.textContent = '';
+  const { data, error } = await sb.rpc('add_friend', { p_player_id: currentPlayer.id, p_friend_nickname: name });
+  if (error) { errEl.textContent = 'Server error'; return; }
+  if (data && data.error) { errEl.textContent = data.error; return; }
+  input.value = '';
+  showToast('Added ' + name + '!');
+  loadLeaderboard('friends');
+}
+
+loadPlayer();
 </script>
 </body>
 </html>
